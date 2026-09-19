@@ -13,7 +13,7 @@ AUTHOR_CREDENTIALS = "PhD (Clinical Biochemistry) | Laboratory Medicine Expert |
 SITE_NAME = "Clinical Biochemistry Guide"
 SITE_URL = "https://medlabguide.github.io"
 TAGLINE = "Expert Medical Laboratory Information You Can Trust"
-ADSENSE_CLIENT = "ca-pub-XXXXXXXXXXXXXXXXX"  # Replace with your AdSense ID after approval
+ADSENSE_CLIENT = "ca-pub-8996085625627875"  # Your real AdSense publisher ID
 
 
 CSS = """
@@ -79,7 +79,7 @@ def _header(title: str, description: str, canonical: str) -> str:
 <meta property="og:description" content="{description}">
 <meta property="og:type" content="article">
 <!-- Google AdSense -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE_CLIENT}" crossorigin="anonymous"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8996085625627875" crossorigin="anonymous"></script>
 <style>{CSS}</style>
 </head>
 <body>
