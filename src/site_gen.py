@@ -78,6 +78,8 @@ def _header(title: str, description: str, canonical: str) -> str:
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{description}">
 <meta property="og:type" content="article">
+<!-- Google Site Verification -->
+<meta name="google-site-verification" content="CXS6yGB8E5wQurV5Dm6EbxVwCE3LKtIJzU6nF59D6cc" />
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8996085625627875" crossorigin="anonymous"></script>
 <style>{CSS}</style>
