@@ -27,14 +27,26 @@ def run():
 
     week = datetime.utcnow().isocalendar()[1]
 
-    # Step 1: Get all articles (existing + new this week)
-    print("📝  Step 1/3 — Loading article catalog ...")
+    # Step 1: Load existing articles + generate new one for this week
+    print("📝  Step 1/3 — Loading articles + generating new article ...")
+    from src.article_fetcher import get_topic_for_week, generate_article_from_topic
+    from src.article_gen import get_all_articles
+
     all_articles = get_all_articles()
-    new_articles  = get_articles_for_week(week, count=3)
-    print(f"  → Total articles in catalog: {len(all_articles)}")
-    print(f"  → New articles this week: {len(new_articles)}")
-    for a in new_articles:
-        print(f"     • {a['title'][:60]}...")
+
+    # Generate fresh new article for this week
+    topic = get_topic_for_week()
+    new_article = generate_article_from_topic(topic)
+
+    # Add new article if not already in catalog (avoid duplicates)
+    existing_slugs = {a["slug"] for a in all_articles}
+    if new_article["slug"] not in existing_slugs:
+        all_articles.append(new_article)
+        print(f"  → New article added: {new_article['title'][:60]}")
+    else:
+        print(f"  → Article already exists: {new_article['slug']}")
+
+    print(f"  → Total articles: {len(all_articles)}")
 
     # Step 2: Build complete website
     print(f"\n🏗️   Step 2/3 — Building website ...")
