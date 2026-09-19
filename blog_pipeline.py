@@ -127,11 +127,11 @@ def _generate_about(output_dir: Path):
     <p>• Clinical laboratory quality control and diagnostics</p>
     <p>• Beta-trace protein (BTP) research</p>
     <p>• Medical education and research methodology</p>
-    <h2>Publications</h2>
-    <p>Dr. Bansal has published peer-reviewed research on renal biomarkers including
-    beta-trace protein as a novel marker for CKD staging, and is co-author of
-    "Quality Control in Clinical Biochemistry: Principles and Practice"
-    (CBS Publishers).</p>
+    <h2>Research and Publications</h2>
+    <p>Dr. Bansal is an active researcher with multiple peer-reviewed publications
+    in clinical biochemistry and laboratory medicine journals. His research encompasses
+    novel biomarkers for kidney disease including beta-trace protein (BTP),
+    metabolic disorders, hormonal markers, and clinical laboratory quality control.</p>
     <h2>About This Website</h2>
     <p>This website provides free, expert-written educational content about medical
     laboratory tests, clinical biochemistry, and health topics. All content is
@@ -147,6 +147,72 @@ def _generate_about(output_dir: Path):
     about_dir.mkdir(exist_ok=True)
     (about_dir / "index.html").write_text(html, encoding="utf-8")
     print(f"  [site] About page generated ✓")
+
+
+def _generate_category_pages(articles: list, output_dir: Path):
+    """Generate category index pages so nav links don't 404."""
+    from src.site_gen import (AUTHOR, AUTHOR_CREDENTIALS, SITE_NAME,
+                               SITE_URL, CSS, _footer, _sidebar)
+
+    categories = {
+        "lab-tests": "Lab Tests",
+        "clinical-biochemistry": "Clinical Biochemistry",
+    }
+
+    for cat_slug, cat_name in categories.items():
+        cat_articles = [a for a in articles if a.get("category") == cat_slug]
+        if not cat_articles:
+            cat_articles = articles  # show all if none in category
+
+        cards = ""
+        for a in cat_articles:
+            excerpt = a["sections"][0][1][:200].replace("\n", " ") + "..."
+            cards += f"""
+<div class="article-card">
+  <h2><a href="{SITE_URL}/{a['slug']}">{a['title']}</a></h2>
+  <div class="meta">By {AUTHOR} | {cat_name}</div>
+  <div class="excerpt">{excerpt}</div>
+  <a href="{SITE_URL}/{a['slug']}" class="read-more">Read Full Article →</a>
+</div>"""
+
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{cat_name} | {SITE_NAME}</title>
+<meta name="description" content="Expert {cat_name} articles by {AUTHOR}, PhD Clinical Biochemistry.">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8996085625627875" crossorigin="anonymous"></script>
+<style>{CSS}</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1><a href="{SITE_URL}" style="color:white;text-decoration:none">{SITE_NAME}</a></h1>
+    <p>Expert Medical Laboratory Information You Can Trust</p>
+  </div>
+</header>
+<nav>
+  <div class="container">
+    <a href="{SITE_URL}">Home</a>
+    <a href="{SITE_URL}/lab-tests">Lab Tests</a>
+    <a href="{SITE_URL}/clinical-biochemistry">Clinical Biochemistry</a>
+    <a href="{SITE_URL}/about">About Dr. Bansal</a>
+  </div>
+</nav>
+<div class="main-grid">
+  <main>
+    <h2 style="color:#1a365d;margin-bottom:20px">{cat_name}</h2>
+    {cards}
+  </main>
+  {_sidebar(articles)}
+</div>
+{_footer()}"""
+
+        cat_dir = output_dir / cat_slug
+        cat_dir.mkdir(parents=True, exist_ok=True)
+        (cat_dir / "index.html").write_text(html, encoding="utf-8")
+        print(f"  [site] Category page generated: /{cat_slug} ✓")
 
 
 if __name__ == "__main__":
