@@ -1,0 +1,40 @@
+name: 📝 Weekly Medical Blog Publisher
+
+on:
+  schedule:
+    - cron: "0 6 * * 2"   # Every Tuesday 11:30 AM IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: 📦 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📝 Build website
+        run: python blog_pipeline.py
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          force_orphan: true
+          cname: medlabguide.github.io
+
+      - name: ✅ Done
+        run: echo "Blog live at https://medlabguide.github.io"
