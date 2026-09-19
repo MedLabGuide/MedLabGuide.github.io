@@ -61,6 +61,9 @@ def run():
     # Create about page
     _generate_about(OUTPUT_DIR)
 
+    # Create category pages (fixes 404 on nav links)
+    _generate_category_pages(all_articles, OUTPUT_DIR)
+
     print(f"\n📊  Step 3/3 — Build complete!")
     html_files = list(OUTPUT_DIR.rglob("*.html"))
     print(f"  → Total pages built: {len(html_files)}")
