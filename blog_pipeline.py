@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 blog_pipeline.py — Automated Medical Blog Publisher
-Runs weekly via GitHub Actions.
-FIXED: Now generates ads.txt for AdSense + more articles per run
+FIXED: Now publishes ALL unpublished articles on every run
+instead of rotating by week number. This means every manual
+run adds new articles until all 25 topics are published.
 """
 import sys, shutil
 from pathlib import Path
@@ -10,7 +11,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from article_gen     import get_all_articles
-from article_fetcher import get_topic_for_week, generate_article_from_topic
+from article_fetcher import get_unpublished_topics, generate_article_from_topic
 from site_gen        import generate_homepage, generate_article_page
 
 OUTPUT_DIR = Path(__file__).parent / "docs"
@@ -22,68 +23,57 @@ def run():
     print(f"  Output   : GitHub Pages (docs/ folder)")
     print(f"{'='*60}\n")
 
-    week = datetime.utcnow().isocalendar()[1]
-    year = datetime.utcnow().year
-
-    print("📝  Step 1/3 — Loading articles + generating new ones ...")
+    print("📝  Step 1/3 — Loading existing + finding unpublished articles ...")
     all_articles = get_all_articles()
-
-    # Generate 3 new articles per run (speeds up content growth)
     existing_slugs = {a["slug"] for a in all_articles}
-    for offset in range(3):
-        try:
-            from article_fetcher import WEEKLY_TOPICS
-            idx = (week * 3 + offset + year * 52) % len(WEEKLY_TOPICS)
-            topic = WEEKLY_TOPICS[idx]
-            new_article = generate_article_from_topic(topic)
-            if new_article["slug"] not in existing_slugs:
-                all_articles.append(new_article)
-                existing_slugs.add(new_article["slug"])
-                print(f"  → New article: {new_article['title'][:55]}...")
-        except Exception as e:
-            print(f"  → Article {offset+1} skipped: {str(e)[:80]}")
+    print(f"  → Already published: {len(all_articles)} articles")
 
-    print(f"  → Total articles: {len(all_articles)}")
+    # Get ALL unpublished topics and add them
+    unpublished = get_unpublished_topics(existing_slugs)
+    print(f"  → Unpublished topics available: {len(unpublished)}")
+
+    added = 0
+    for topic in unpublished:
+        try:
+            new_article = generate_article_from_topic(topic)
+            all_articles.append(new_article)
+            existing_slugs.add(new_article["slug"])
+            print(f"  → Added: {new_article['title'][:55]}...")
+            added += 1
+        except Exception as e:
+            print(f"  → Skipped {topic['slug']}: {str(e)[:80]}")
+
+    print(f"  → New articles added this run: {added}")
+    print(f"  → Total articles now: {len(all_articles)}")
 
     print(f"\n🏗️   Step 2/3 — Building website ...")
     if OUTPUT_DIR.exists():
         shutil.rmtree(OUTPUT_DIR)
     OUTPUT_DIR.mkdir(parents=True)
 
-    # Generate all article pages
     for article in all_articles:
         generate_article_page(article, OUTPUT_DIR)
 
-    # Generate homepage
     generate_homepage(all_articles, OUTPUT_DIR)
 
     # Essential files
     (OUTPUT_DIR / ".nojekyll").touch()
-    print(f"  [site] .nojekyll created ✓")
 
-    # ads.txt — CRITICAL for AdSense approval
+    # ads.txt — required for AdSense
     (OUTPUT_DIR / "ads.txt").write_text(
         "google.com, pub-8996085625627875, DIRECT, f08c47fec0942fa0\n",
         encoding="utf-8"
     )
-    print(f"  [site] ads.txt created ✓")
+    print(f"  [site] ads.txt ✓")
 
-    # Sitemap
     _generate_sitemap(all_articles, OUTPUT_DIR)
-
-    # Robots.txt
     _generate_robots(OUTPUT_DIR)
-
-    # About page
     _generate_about(OUTPUT_DIR)
-
-    # Category pages
     _generate_category_pages(all_articles, OUTPUT_DIR)
 
     print(f"\n📊  Step 3/3 — Build complete!")
-    html_files = list(OUTPUT_DIR.rglob("*.html"))
-    print(f"  → Total pages: {len(html_files)}")
-    print(f"  → ads.txt: ✅ (fixes AdSense 'not found' error)")
+    print(f"  → Total pages: {len(list(OUTPUT_DIR.rglob('*.html')))}")
+    print(f"  → Total articles: {len(all_articles)}")
     print(f"🌐  Live at: https://medlabguide.github.io")
 
 
@@ -97,7 +87,7 @@ def _generate_sitemap(articles, output_dir):
 {''.join(urls)}
 </urlset>"""
     (output_dir / "sitemap.xml").write_text(sitemap, encoding="utf-8")
-    print(f"  [site] sitemap.xml generated ✓")
+    print(f"  [site] sitemap.xml ✓")
 
 
 def _generate_robots(output_dir):
@@ -106,7 +96,7 @@ def _generate_robots(output_dir):
         f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n",
         encoding="utf-8"
     )
-    print(f"  [site] robots.txt generated ✓")
+    print(f"  [site] robots.txt ✓")
 
 
 def _generate_about(output_dir):
@@ -152,7 +142,7 @@ def _generate_about(output_dir):
     <p>Dr. Bansal is an active researcher with multiple peer-reviewed publications
     in clinical biochemistry and laboratory medicine journals.</p>
     <h2>About This Website</h2>
-    <p>This website provides free, expert-written educational content about medical
+    <p>This website provides free expert-written educational content about medical
     laboratory tests, clinical biochemistry, and health topics.</p>
     <p style="margin-top:15px;font-size:0.85em;color:#718096">
     <strong>Medical Disclaimer:</strong> Content on this site is for educational
@@ -163,16 +153,15 @@ def _generate_about(output_dir):
     about_dir = output_dir / "about"
     about_dir.mkdir(exist_ok=True)
     (about_dir / "index.html").write_text(html, encoding="utf-8")
-    print(f"  [site] About page generated ✓")
+    print(f"  [site] About page ✓")
 
 
 def _generate_category_pages(articles, output_dir):
-    from src.site_gen import (AUTHOR, AUTHOR_CREDENTIALS, SITE_NAME,
-                               SITE_URL, CSS, _footer, _sidebar)
+    from src.site_gen import (AUTHOR, SITE_NAME, SITE_URL, CSS, _footer, _sidebar)
     categories = {
-        "lab-tests": "Lab Tests",
+        "lab-tests"            : "Lab Tests",
         "clinical-biochemistry": "Clinical Biochemistry",
-        "patient-guides": "Patient Guides",
+        "patient-guides"       : "Patient Guides",
     }
     for cat_slug, cat_name in categories.items():
         cat_articles = [a for a in articles if a.get("category") == cat_slug]
@@ -227,7 +216,7 @@ def _generate_category_pages(articles, output_dir):
         cat_dir = output_dir / cat_slug
         cat_dir.mkdir(parents=True, exist_ok=True)
         (cat_dir / "index.html").write_text(html, encoding="utf-8")
-        print(f"  [site] Category page: /{cat_slug} ✓")
+        print(f"  [site] Category /{cat_slug} ✓")
 
 
 if __name__ == "__main__":
